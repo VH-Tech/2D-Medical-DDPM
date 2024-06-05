@@ -92,14 +92,18 @@ class CustomDataset(Dataset):
     def __init__(self,imgs_path):
         self.imgs_path = imgs_path
 
-        file_list = natsorted(glob.glob(self.imgs_path + "*"), key=lambda y: y.lower())
+        # file_list = natsorted(glob.glob(self.imgs_path + "*"), key=lambda y: y.lower())
         # print(file_list)
+        # recursively get all files in the directory
         self.data = []
+        for root, dirs, files in os.walk(self.imgs_path):
+            for file in files:
+                if file.endswith(".nii") or file.endswith(".nii.gz") or file.endswith(".png") or file.endswith(".jpg"):
+                    class_name = file.split("_")[0]
+                    self.data.append([os.path.join(root, file),class_name])
+
         # self.loader = LoadImaged(keys= ['image','label'],reader='nibabelreader')
         # self.loader = LoadImaged(keys= ['image','label'],reader='PILReader')
-        for img_path in file_list:
-            class_name = img_path.split("/")[-1]
-            self.data.append([img_path, class_name])
         self.train_transforms = Compose(
                 [
                     LoadImaged(keys=["image"],reader='PILreader'),
@@ -265,7 +269,7 @@ params = {'batch_size': BATCH_SIZE_TRAIN,
           'shuffle': True,
           'pin_memory': True,
           'drop_last': False}
-training_set1 = CustomDataset('C:\Pan research\Diffusion model\ACDC_2D/train/')
+training_set1 = CustomDataset('/storage/vatsal/datasets/hyper_diffusion')
 train_loader1 = torch.utils.data.DataLoader(training_set1, **params)
 
 
@@ -329,7 +333,7 @@ def evaluate(model,epoch,path):
 
 
 N_EPOCHS = 550
-path ="C:/Pan research/Diffusion model/result/ACDC/"
+path ="/storage/vatsal/logs_DDPM/"
 PATH = path+'ViTRes1.pt' # Use your own path
 PATH1 = path+'ViTRes1.pt' # Use your own pathwaa
 best_loss = 1
