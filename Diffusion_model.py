@@ -22,12 +22,11 @@ from einops import rearrange
 from scipy import ndimage
 from skimage import io
 from skimage import transform
-from natsort import natsorted
 from skimage.transform import rotate, AffineTransform
 from timm.models.layers import DropPath, to_3tuple, trunc_normal_
 from monai.transforms import (
     AsDiscrete,
-    AddChanneld,
+    EnsureChannelFirstd,
     Compose,
     CropForegroundd,
     LoadImaged,
@@ -65,7 +64,6 @@ from monai.config import print_config
 from monai.metrics import DiceMetric
 from skimage.transform import resize
 import scipy.io
-import matplotlib.pyplot as plt
 
 import numpy as np
 
@@ -74,8 +72,8 @@ from torch import nn, einsum
 import torch.nn.functional as F
 
 
-from Create_diffusion import *
-from resampler import *
+from diffusion.Create_diffusion import *
+from diffusion.resampler import *
 from torchvision.utils import save_image
 
 
@@ -107,7 +105,7 @@ class CustomDataset(Dataset):
         self.train_transforms = Compose(
                 [
                     LoadImaged(keys=["image"],reader='PILreader'),
-                    AddChanneld(keys=["image"]),
+                    EnsureChannelFirstd(keys=["image"]),
                     # Orientationd(keys=["image"], axcodes="RAS"),
                     # Spacingd(
                     #     keys=["image"],
@@ -215,50 +213,50 @@ class_cond = False
 attention_ds = []
 for res in attention_resolutions.split(","):
     attention_ds.append(int(res))
-# from Diffusion_model_Unet import *
-# model = UNetModel(
-#         image_size=image_size,
-#         in_channels=1,
-#         model_channels=num_channels,
-#         out_channels=2,
-#         num_res_blocks=num_res_blocks[0],
-#         attention_resolutions=tuple(attention_ds),
-#         dropout=0.,
-#         sample_kernel=sample_kernel,
-#         channel_mult=channel_mult,
-#         num_classes=(NUM_CLASSES if class_cond else None),
-#         use_checkpoint=False,
-#         use_fp16=False,
-#         num_heads=4,
-#         num_head_channels=64,
-#         num_heads_upsample=-1,
-#         use_scale_shift_norm=use_scale_shift_norm,
-#         resblock_updown=False,
-#         use_new_attention_order=False,
-#     ).to(device)
-
-from Diffusion_model_transformer import *
-model = SwinVITModel(
-        image_size=(image_size,image_size),
-        in_channels=1,
+from network.Diffusion_model_Unet import *
+model = UNetModel(
+        image_size=image_size,
+        in_channels=3,
         model_channels=num_channels,
-        out_channels=2,
-        sample_kernel=sample_kernel,
-        num_res_blocks=num_res_blocks,
+        out_channels=6,
+        num_res_blocks=num_res_blocks[0],
         attention_resolutions=tuple(attention_ds),
-        dropout=0,
+        dropout=0.,
+        sample_kernel=sample_kernel,
         channel_mult=channel_mult,
         num_classes=(NUM_CLASSES if class_cond else None),
         use_checkpoint=False,
         use_fp16=False,
-        num_heads=num_heads,
-        window_size = window_size,
+        num_heads=4,
         num_head_channels=64,
         num_heads_upsample=-1,
         use_scale_shift_norm=use_scale_shift_norm,
-        resblock_updown=resblock_updown,
+        resblock_updown=False,
         use_new_attention_order=False,
     ).to(device)
+
+# from network.Diffusion_model_transformer import *
+# model = SwinVITModel(
+#         image_size=(image_size,image_size),
+#         in_channels=3,
+#         model_channels=num_channels,
+#         out_channels=6,
+#         sample_kernel=sample_kernel,
+#         num_res_blocks=num_res_blocks,
+#         attention_resolutions=tuple(attention_ds),
+#         dropout=0,
+#         channel_mult=channel_mult,
+#         num_classes=(NUM_CLASSES if class_cond else None),
+#         use_checkpoint=False,
+#         use_fp16=False,
+#         num_heads=num_heads,
+#         window_size = window_size,
+#         num_head_channels=64,
+#         num_heads_upsample=-1,
+#         use_scale_shift_norm=use_scale_shift_norm,
+#         resblock_updown=resblock_updown,
+#         use_new_attention_order=False,
+#     ).to(device)
 
 
 pytorch_total_params = sum(p.numel() for p in model.parameters())
@@ -348,8 +346,8 @@ for epoch in range(0, N_EPOCHS):
     print('Execution time:', '{:5.2f}'.format(time.time() - start_time), 'seconds')
     if epoch % 5 == 0:
         evaluate(model,epoch,path)
-        # if average_loss < best_loss:
-        print('Save the latest best model')
-        torch.save(model.state_dict(), PATH1)
-        # best_loss = average_loss
+        if average_loss < best_loss:
+            print('Save the latest best model')
+            torch.save(model.state_dict(), PATH1)
+            best_loss = average_loss
 print('Execution time')

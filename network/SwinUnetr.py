@@ -17,7 +17,7 @@ import torch.utils.checkpoint as checkpoint
 from torch.nn import LayerNorm
 
 from monai.networks.blocks import MLPBlock as Mlp
-from monai.networks.blocks import PatchEmbed, UnetOutBlock, UnetrBasicBlock, UnetrUpBlock
+from monai.networks.blocks import PatchEmbeddingBlock, UnetOutBlock, UnetrBasicBlock, UnetrUpBlock
 from monai.networks.layers import DropPath, trunc_normal_
 from monai.utils import ensure_tuple_rep, look_up_option, optional_import
 
@@ -951,7 +951,7 @@ class SwinTransformer(nn.Module):
         self.patch_norm = patch_norm
         self.window_size = window_size
         self.patch_size = patch_size
-        self.patch_embed = PatchEmbed(
+        self.patch_embed = PatchEmbeddingBlock(
             patch_size=self.patch_size,
             in_chans=in_chans,
             embed_dim=embed_dim,
